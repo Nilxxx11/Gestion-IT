@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Activos y Usuarios</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+    :root {
+        --bg-primary: #121212;
+        --bg-secondary: #1e1e1e;
+        --text-primary: #e0e0e0;
+        --text-secondary: #a0a0a0;
+        --accent: #3a7bd5;
+        --success: #28a745;
+        --warning: #ffc107;
+        --danger: #dc3545;
+        --info: #17a2b8;
+    }
+    
+    body {
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .sidebar {
+        background-color: var(--bg-secondary);
+        min-height: 100vh;
+        padding: 0;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+    }
+    
+    .sidebar .nav-link {
+        color: var(--text-secondary);
+        padding: 15px 20px;
+        transition: all 0.3s;
+    }
+    
+    .sidebar .nav-link:hover, .sidebar .nav-link.active {
+        color: var(--text-primary);
+        background-color: rgba(58, 123, 213, 0.2);
+        border-left: 4px solid var(--accent);
+    }
+    
+    .sidebar .nav-link i {
+        margin-right: 10px;
+        width: 20px;
+        text-align: center;
+    }
+    
+    .main-content {
+        padding: 20px;
+    }
+    
+    .card {
+        background-color: var(--bg-secondary);
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .card-header {
+        background-color: rgba(0, 0, 0, 0.2);
+        border-bottom: 1px solid #333;
+        font-weight: 600;
+    }
+    
+    .table {
+        color: var(--text-primary);
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .form-control, .form-select {
+        background-color: #2c2c2c;
+        border: 1px solid #444;
+        color: var(--text-primary);
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background-color: #2c2c2c;
+        border-color: var(--accent);
+        color: var(--text-primary);
+        box-shadow: 0 0 0 0.25rem rgba(58, 123, 213, 0.25);
+    }
+    
+    .btn-primary {
+        background-color: var(--accent);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background-color: #2d63b0;
+    }
+    
+    .stat-card {
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .stat-card i {
+        font-size: 2rem;
+        margin-bottom: 10px;
+        color: var(--accent);
+    }
+    
+    .stat-card .number {
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
+    
+    .stat-card .label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+    }
+    
+    /* ESTILOS PARA CAMBIAR EL COLOR DE LOS CONTADORES */
+    #userCount {
+        color: var(--success); /* Verde para usuarios */
+    }
+    
+    #assetCount {
+        color: var(--info); /* Azul turquesa para activos */
+    }
+    
+    #solutionCount {
+        color: var(--warning); /* Amarillo para soluciones */
+    }
+    
+    #maintenanceCount {
+        color: var(--danger); /* Rojo para mantenimientos */
+    }
+    
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: var(--bg-primary);
+    }
+    
+    .login-box {
+        background-color: var(--bg-secondary);
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            min-height: auto;
+            margin-bottom: 20px;
+        }
+    }
+
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+    
+    .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+    
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+    
+    .search-box {
+        max-width: 300px;
+    }
+    
+    .action-buttons {
+        white-space: nowrap;
+    }
+    
+    /* Estilos adicionales para formularios */
+    .was-validated .form-control:valid, .form-control.is-valid {
+        background-color: #2c2c2c;
+        border-color: var(--success);
+    }
+    
+    .was-validated .form-control:invalid, .form-control.is-invalid {
+        background-color: #2c2c2c;
+        border-color: var(--danger);
+    }
+    
+    .invalid-feedback {
+        color: #ff6b6b;
+    }
+    
+    .valid-feedback {
+        color: #51cf66;
+    }
+    
+    /* Estilos para las tablas */
+    .table-responsive {
+        min-height: 300px;
+    }
+    
+    /* Estilos para los badges de estado */
+    .bg-success {
+        background-color: var(--success) !important;
+    }
+    
+    .bg-warning {
+        background-color: var(--warning) !important;
+    }
+    
+    .bg-danger {
+        background-color: var(--danger) !important;
+    }
+    
+    .bg-secondary {
+        background-color: #6c757d !important;
+    }
+    
+    /* Estilos para los modales */
+    .modal-content {
+        background-color: var(--bg-secondary);
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid #444;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid #444;
+    }
+    
+    /* Estilos para los botones de acción */
+    .btn-outline-warning {
+        color: var(--warning);
+        border-color: var(--warning);
+    }
+    
+    .btn-outline-warning:hover {
+        background-color: var(--warning);
+        color: #000;
+    }
+    
+    .btn-outline-danger {
+        color: var(--danger);
+        border-color: var(--danger);
+    }
+    
+    .btn-outline-danger:hover {
+        background-color: var(--danger);
+        color: #fff;
+    }
+    
+    .btn-outline-info {
+        color: var(--info);
+        border-color: var(--info);
+    }
+    
+    .btn-outline-info:hover {
+        background-color: var(--info);
+        color: #fff;
+    }
+    
+    /* Efectos de transición */
+    .nav-link, .btn, .form-control, .form-select {
+        transition: all 0.3s ease;
+    }
+    
+    /* Personalización del scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: var(--bg-secondary);
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: #444;
+        border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
+</head>
+<body>
+    <!-- Contenedor para notificaciones Toast -->
+    <div class="toast-container"></div>
+    
+    <!-- Overlay de carga -->
+    <div class="loading-overlay d-none" id="loadingOverlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+    <!-- Pantalla de Login -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <h2 class="text-center mb-4">NilSystem</h2>
+            <div class="mb-3">
+                <label for="masterPassword" class="form-label">Contraseña Maestra</label>
+                <input type="password" class="form-control" id="masterPassword" required>
+            </div>
+            <button id="loginBtn" class="btn btn-primary w-100">Ingresar</button>
+        </div>
+    </div>
+
+    <!-- Aplicación principal (oculta inicialmente) -->
+    <div id="appContent" class="d-none">
+        <div class="container-fluid">
+            <div class="row">
+                <!-- Sidebar -->
+                <div class="col-lg-2 col-md-3 sidebar py-4">
+                    <h4 class="text-center mb-4">NilSystem</h4>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#dashboard" data-bs-toggle="tab">
+                                <i class="fas fa-tachometer-alt"></i> Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#usuarios" data-bs-toggle="tab">
+                                <i class="fas fa-users"></i> Usuarios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#activos" data-bs-toggle="tab">
+                                <i class="fas fa-laptop"></i> Activos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#soluciones" data-bs-toggle="tab">
+                                <i class="fas fa-tools"></i> Soluciones
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#mantenimientos" data-bs-toggle="tab">
+                                <i class="fas fa-cogs"></i> Mantenimientos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#contrasenas" data-bs-toggle="tab">
+                                <i class="fas fa-key"></i> Contraseñas
+                            </a>
+                        </li>
+                        <li class="nav-item mt-4">
+                            <a class="nav-link" href="#" id="exportBtn">
+                                <i class="fas fa-file-export"></i> Exportar a Excel
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" id="logoutBtn">
+                                <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Main Content -->
+                <div class="col-lg-10 col-md-9 main-content">
+                    <div class="tab-content">
+                        <!-- Dashboard -->
+                        <div class="tab-pane fade show active" id="dashboard">
+                            <h2 class="mb-4">Dashboard</h2>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="card stat-card">
+                                        <i class="fas fa-users"></i>
+                                        <div class="number" id="userCount">0</div>
+                                        <div class="label">Usuarios</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card stat-card">
+                                        <i class="fas fa-laptop"></i>
+                                        <div class="number" id="assetCount">0</div>
+                                        <div class="label">Activos</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card stat-card">
+                                        <i class="fas fa-tools"></i>
+                                        <div class="number" id="solutionCount">0</div>
+                                        <div class="label">Soluciones</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card stat-card">
+                                        <i class="fas fa-cogs"></i>
+                                        <div class="number" id="maintenanceCount">0</div>
+                                        <div class="label">Mantenimientos</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-4">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">Activos por Empresa</div>
+                                        <div class="card-body">
+                                            <canvas id="companyChart" height="250"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">Últimos Mantenimientos</div>
+                                        <div class="card-body">
+                                            <div class="table-responsive">
+                                                <table class="table table-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Activo</th>
+                                                            <th>Fecha</th>
+                                                            <th>Tipo</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="recentMaintenance">
+                                                        <!-- Los últimos mantenimientos se cargarán aquí -->
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Usuarios -->
+                        <div class="tab-pane fade" id="usuarios">
+                            <h2 class="mb-4">Gestión de Usuarios</h2>
+                            <div class="card">
+                                <div class="card-header">
+                                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#userModal">
+                                        <i class="fas fa-plus"></i> Nuevo Usuario
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nombre</th>
+                                                    <th>Empresa</th>
+                                                    <th>Cargo</th>
+                                                    <th>Email</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="usersTable">
+                                                <!-- Los usuarios se cargarán aquí -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Activos -->
+                        <div class="tab-pane fade" id="activos">
+                            <h2 class="mb-4">Gestión de Activos</h2>
+                            <div class="card">
+                                <div class="card-header">
+                                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#assetModal">
+                                        <i class="fas fa-plus"></i> Nuevo Activo
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Nombre</th>
+                                                    <th>Empresa</th>
+                                                    <th>Tipo</th>
+                                                    <th>Usuario</th>
+                                                    <th>Estado</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="assetsTable">
+                                                <!-- Los activos se cargarán aquí -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Soluciones -->
+                        <div class="tab-pane fade" id="soluciones">
+                            <h2 class="mb-4">Soluciones a Problemas</h2>
+                            <div class="card">
+                                <div class="card-header">
+                                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#solutionModal">
+                                        <i class="fas fa-plus"></i> Nueva Solución
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Problema</th>
+                                                    <th>Empresa</th>
+                                                    <th>Categoría</th>
+                                                    <th>Fecha</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="solutionsTable">
+                                                <!-- Las soluciones se cargarán aquí -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Mantenimientos -->
+                        <div class="tab-pane fade" id="mantenimientos">
+                            <h2 class="mb-4">Registro de Mantenimientos</h2>
+                            <div class="card">
+                                <div class="card-header">
+                                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#maintenanceModal">
+                                        <i class="fas fa-plus"></i> Nuevo Mantenimiento
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Activo</th>
+                                                    <th>Empresa</th>
+                                                    <th>Tipo</th>
+                                                    <th>Fecha</th>
+                                                    <th>Descripción</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="maintenanceTable">
+                                                <!-- Los mantenimientos se cargarán aquí -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Contraseñas -->
+                        <div class="tab-pane fade" id="contrasenas">
+                            <h2 class="mb-4">Gestión de Contraseñas</h2>
+                            <div class="card">
+                                <div class="card-header">
+                                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#passwordModal">
+                                        <i class="fas fa-plus"></i> Nueva Contraseña
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Sistema/App</th>
+                                                    <th>Empresa</th>
+                                                    <th>Usuario</th>
+                                                    <th>Contraseña</th>
+                                                    <th>Acciones</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="passwordsTable">
+                                                <!-- Las contraseñas se cargarán aquí -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modales para agregar/editar elementos -->
+        <!-- Modal de Usuario -->
+        <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="userModalTitle">Agregar Usuario</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="userForm">
+                            <input type="hidden" id="userId">
+                            <div class="mb-3">
+                                <label for="userName" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="userName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="userCompany" class="form-label">Empresa</label>
+                                <select class="form-select" id="userCompany" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="HB Y CIA S.A.S">HB Y CIA S.A.S</option>
+                                    <option value="Vehidiesel">Vehidiesel</option>
+                                    <option value="Vehimotors">Vehimotors</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="userPosition" class="form-label">Cargo</label>
+                                <input type="text" class="form-control" id="userPosition" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="userEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="userEmail" required>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="saveUser">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal de Activo -->
+        <div class="modal fade" id="assetModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="assetModalTitle">Agregar Activo</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="assetForm">
+                            <input type="hidden" id="assetId">
+                            <div class="mb-3">
+                                <label for="assetName" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="assetName" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="assetCompany" class="form-label">Empresa</label>
+                                <select class="form-select" id="assetCompany" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="HB Y CIA S.A.S">HB Y CIA S.A.S</option>
+                                    <option value="Vehidiesel">Vehidiesel</option>
+                                    <option value="Vehimotors">Vehimotors</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="assetType" class="form-label">Tipo</label>
+                                <select class="form-select" id="assetType" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="PC">PC</option>
+                                    <option value="Laptop">Laptop</option>
+                                    <option value="Impresora">Impresora</option>
+                                    <option value="Servidor">Servidor</option>
+                                    <option value="Hardware">Hardware</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="assetUser" class="form-label">Usuario Asignado</label>
+                                <select class="form-select" id="assetUser">
+                                    <option value="">Ninguno</option>
+                                    <!-- Los usuarios se cargarán aquí dinámicamente -->
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="assetStatus" class="form-label">Estado</label>
+                                <select class="form-select" id="assetStatus" required>
+                                    <option value="Activo">Activo</option>
+                                    <option value="Inactivo">Inactivo</option>
+                                    <option value="Mantenimiento">En Mantenimiento</option>
+                                    <option value="Baja">De Baja</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="assetSpecs" class="form-label">Especificaciones</label>
+                                <textarea class="form-control" id="assetSpecs" rows="3"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="saveAsset">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal de Solución -->
+        <div class="modal fade" id="solutionModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="solutionModalTitle">Agregar Solución</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="solutionForm">
+                            <input type="hidden" id="solutionId">
+                            <div class="mb-3">
+                                <label for="solutionProblem" class="form-label">Problema</label>
+                                <input type="text" class="form-control" id="solutionProblem" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="solutionCompany" class="form-label">Empresa</label>
+                                <select class="form-select" id="solutionCompany" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="HB Y CIA S.A.S">HB Y CIA S.A.S</option>
+                                    <option value="Vehidiesel">Vehidiesel</option>
+                                    <option value="Vehimotors">Vehimotors</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="solutionCategory" class="form-label">Categoría</label>
+                                <input type="text" class="form-control" id="solutionCategory" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="solutionDescription" class="form-label">Solución</label>
+                                <textarea class="form-control" id="solutionDescription" rows="4" required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="saveSolution">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal de Mantenimiento -->
+        <div class="modal fade" id="maintenanceModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="maintenanceModalTitle">Agregar Mantenimiento</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="maintenanceForm">
+                            <input type="hidden" id="maintenanceId">
+                            <div class="mb-3">
+                                <label for="maintenanceAsset" class="form-label">Activo</label>
+                                <select class="form-select" id="maintenanceAsset" required>
+                                    <option value="">Seleccionar...</option>
+                                    <!-- Los activos se cargarán aquí dinámicamente -->
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="maintenanceCompany" class="form-label">Empresa</label>
+                                <select class="form-select" id="maintenanceCompany" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="HB Y CIA S.A.S">HB Y CIA S.A.S</option>
+                                    <option value="Vehidiesel">Vehidiesel</option>
+                                    <option value="Vehimotors">Vehimotors</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="maintenanceType" class="form-label">Tipo de Mantenimiento</label>
+                                <select class="form-select" id="maintenanceType" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Preventivo">Preventivo</option>
+                                    <option value="Correctivo">Correctivo</option>
+                                    <option value="Predictivo">Predictivo</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="maintenanceDate" class="form-label">Fecha</label>
+                                <input type="date" class="form-control" id="maintenanceDate" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="maintenanceDescription" class="form-label">Descripción</label>
+                                <textarea class="form-control" id="maintenanceDescription" rows="3" required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="maintenanceCost" class="form-label">Costo</label>
+                                <input type="number" class="form-control" id="maintenanceCost" step="0.01">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="saveMaintenance">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal de Contraseña -->
+        <div class="modal fade" id="passwordModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content bg-dark">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="passwordModalTitle">Agregar Contraseña</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="passwordForm">
+                            <input type="hidden" id="passwordId">
+                            <div class="mb-3">
+                                <label for="passwordSystem" class="form-label">Sistema/Aplicación</label>
+                                <input type="text" class="form-control" id="passwordSystem" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="passwordCompany" class="form-label">Empresa</label>
+                                <select class="form-select" id="passwordCompany" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="HB Y CIA S.A.S">HB Y CIA S.A.S</option>
+                                    <option value="Vehidiesel">Vehidiesel</option>
+                                    <option value="Vehimotors">Vehimotors</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="passwordUsername" class="form-label">Usuario</label>
+                                <input type="text" class="form-control" id="passwordUsername" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="passwordValue" class="form-label">Contraseña</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="passwordValue" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="passwordUrl" class="form-label">URL (opcional)</label>
+                                <input type="url" class="form-control" id="passwordUrl">
+                            </div>
+                            <div class="mb-3">
+                                <label for="passwordNotes" class="form-label">Notas</label>
+                                <textarea class="form-control" id="passwordNotes" rows="2"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="savePassword">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Configuración de Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyCfJiBkzwaLdoSpQDHU3rCgfC4nMr58hUk",
+        authDomain: "paginaweb-d1886.firebaseapp.com",
+        databaseURL: "https://paginaweb-d1886-default-rtdb.firebaseio.com",
+        projectId: "paginaweb-d1886",
+        storageBucket: "paginaweb-d1886.firebasestorage.app",
+        messagingSenderId: "430619803153",
+        appId: "1:430619803153:web:1fbada3c7fb6ca45a07bb0",
+        measurementId: "G-BYJ5RVSZ92"
+    };
+    
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    // Referencias a las colecciones de la base de datos
+    const usersRef = database.ref('users');
+    const assetsRef = database.ref('assets');
+    const solutionsRef = database.ref('solutions');
+    const maintenanceRef = database.ref('maintenance');
+    const passwordsRef = database.ref('passwords');
+    const configRef = database.ref('config');
+    
+    // Variables globales para almacenar datos
+    let users = [];
+    let assets = [];
+    let solutions = [];
+    let maintenance = [];
+    let passwords = [];
+    let masterPassword = "&An&7538$$"; // Contraseña maestra por defecto
+    
+    // Cargar configuración de la base de datos
+    function loadConfig() {
+        configRef.once('value').then(snapshot => {
+            const config = snapshot.val();
+            if (config && config.masterPassword) {
+                masterPassword = config.masterPassword;
+            }
+        });
+    }
+    
+    // Inicializar la aplicación cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        // Cargar configuración
+        loadConfig();
+        
+        // Configurar evento de login
+        document.getElementById('loginBtn').addEventListener('click', login);
+        document.getElementById('masterPassword').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+        
+        // Configurar evento de logout
+        document.getElementById('logoutBtn').addEventListener('click', logout);
+        
+        // Configurar el botón de exportación
+        document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+        
+        // Configurar el botón para mostrar/ocultar contraseña
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordField = document.getElementById('passwordValue');
+            const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordField.setAttribute('type', type);
+            this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+        });
+        
+        // Configurar event listeners para los botones de guardar después del login
+        function setupSaveListeners() {
+            document.getElementById('saveUser').addEventListener('click', saveUser);
+            document.getElementById('saveAsset').addEventListener('click', saveAsset);
+            document.getElementById('saveSolution').addEventListener('click', saveSolution);
+            document.getElementById('saveMaintenance').addEventListener('click', saveMaintenance);
+            document.getElementById('savePassword').addEventListener('click', savePassword);
+        }
+        
+        // Actualizar opciones de usuarios en el modal de activos
+        usersRef.on('value', function(snapshot) {
+            const userSelect = document.getElementById('assetUser');
+            userSelect.innerHTML = '<option value="">Ninguno</option>';
+            
+            snapshot.forEach(function(childSnapshot) {
+                const user = childSnapshot.val();
+                const option = document.createElement('option');
+                option.value = childSnapshot.key;
+                option.textContent = user.name;
+                userSelect.appendChild(option);
+            });
+        });
+        
+        // Actualizar opciones de activos en el modal de mantenimiento
+        assetsRef.on('value', function(snapshot) {
+            const assetSelect = document.getElementById('maintenanceAsset');
+            assetSelect.innerHTML = '<option value="">Seleccionar...</option>';
+            
+            snapshot.forEach(function(childSnapshot) {
+                const asset = childSnapshot.val();
+                const option = document.createElement('option');
+                option.value = childSnapshot.key;
+                option.textContent = asset.name;
+                assetSelect.appendChild(option);
+            });
+        });
+        
+        // Función de login
+        function login() {
+            const password = document.getElementById('masterPassword').value;
+            if (password === masterPassword) {
+                document.getElementById('loginScreen').classList.add('d-none');
+                document.getElementById('appContent').classList.remove('d-none');
+                showToast('Bienvenido a NilSystem', 'success');
+                
+                // Configurar los event listeners de guardado después del login
+                setupSaveListeners();
+                
+                // Cargar datos después del login
+                loadData();
+            } else {
+                showToast('Contraseña incorrecta', 'danger');
+            }
+        }
+        
+        // Función de logout
+        function logout() {
+            document.getElementById('loginScreen').classList.remove('d-none');
+            document.getElementById('appContent').classList.add('d-none');
+            document.getElementById('masterPassword').value = '';
+            showToast('Sesión cerrada', 'info');
+        }
+    });
+    
+    // Mostrar notificación Toast
+    function showToast(message, type = 'success') {
+        const toastContainer = document.querySelector('.toast-container');
+        const toastId = 'toast-' + Date.now();
+        
+        const toastEl = document.createElement('div');
+        toastEl.className = `toast align-items-center text-bg-${type} border-0`;
+        toastEl.setAttribute('role', 'alert');
+        toastEl.setAttribute('aria-live', 'assertive');
+        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.id = toastId;
+        
+        toastEl.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toastEl);
+        
+        const toast = new bootstrap.Toast(toastEl, {
+            delay: 3000
+        });
+        toast.show();
+        
+        // Eliminar el toast del DOM después de que se oculte
+        toastEl.addEventListener('hidden.bs.toast', function() {
+            toastEl.remove();
+        });
+    }
+    
+    // Cargar datos desde Firebase
+    function loadData() {
+        showLoading();
+        
+        // Cargar usuarios
+        usersRef.on('value', function(snapshot) {
+            users = [];
+            snapshot.forEach(function(childSnapshot) {
+                const user = childSnapshot.val();
+                user.id = childSnapshot.key;
+                users.push(user);
+            });
+            renderUsers();
+            updateDashboard();
+            hideLoading();
+        });
+        
+        // Cargar activos
+        assetsRef.on('value', function(snapshot) {
+            assets = [];
+            snapshot.forEach(function(childSnapshot) {
+                const asset = childSnapshot.val();
+                asset.id = childSnapshot.key;
+                assets.push(asset);
+            });
+            renderAssets();
+            updateDashboard();
+        });
+        
+        // Cargar soluciones
+        solutionsRef.on('value', function(snapshot) {
+            solutions = [];
+            snapshot.forEach(function(childSnapshot) {
+                const solution = childSnapshot.val();
+                solution.id = childSnapshot.key;
+                solutions.push(solution);
+            });
+            renderSolutions();
+            updateDashboard();
+        });
+        
+        // Cargar mantenimientos
+        maintenanceRef.on('value', function(snapshot) {
+            maintenance = [];
+            snapshot.forEach(function(childSnapshot) {
+                const maint = childSnapshot.val();
+                maint.id = childSnapshot.key;
+                maintenance.push(maint);
+            });
+            renderMaintenance();
+            updateDashboard();
+        });
+        
+        // Cargar contraseñas
+        passwordsRef.on('value', function(snapshot) {
+            passwords = [];
+            snapshot.forEach(function(childSnapshot) {
+                const password = childSnapshot.val();
+                password.id = childSnapshot.key;
+                passwords.push(password);
+            });
+            renderPasswords();
+        });
+    }
+    
+    // Mostrar overlay de carga
+    function showLoading() {
+        document.getElementById('loadingOverlay').classList.remove('d-none');
+    }
+    
+    // Ocultar overlay de carga
+    function hideLoading() {
+        document.getElementById('loadingOverlay').classList.add('d-none');
+    }
+    
+    // Renderizar usuarios en la tabla
+    function renderUsers() {
+        const table = document.getElementById('usersTable');
+        table.innerHTML = '';
+        
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.name}</td>
+                <td>${user.company}</td>
+                <td>${user.position}</td>
+                <td>${user.email}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-warning me-1 edit-user" data-id="${user.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-user" data-id="${user.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            table.appendChild(row);
+        });
+        
+        // Agregar event listeners para los botones de editar y eliminar
+        document.querySelectorAll('.edit-user').forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                editUser(userId);
+            });
+        });
+        
+        document.querySelectorAll('.delete-user').forEach(button => {
+            button.addEventListener('click', function() {
+                const userId = this.getAttribute('data-id');
+                deleteUser(userId);
+            });
+        });
+    }
+    
+    // Renderizar activos en la tabla
+    function renderAssets() {
+        const table = document.getElementById('assetsTable');
+        table.innerHTML = '';
+        
+        assets.forEach(asset => {
+            // Obtener el nombre del usuario asignado si existe
+            let userName = 'No asignado';
+            if (asset.user) {
+                const user = users.find(u => u.id === asset.user);
+                if (user) userName = user.name;
+            }
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${asset.name}</td>
+                <td>${asset.company}</td>
+                <td>${asset.type}</td>
+                <td>${userName}</td>
+                <td><span class="badge ${getStatusBadgeClass(asset.status)}">${asset.status}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-warning me-1 edit-asset" data-id="${asset.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-asset" data-id="${asset.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            table.appendChild(row);
+        });
+        
+        // Agregar event listeners para los botones de editar y eliminar
+        document.querySelectorAll('.edit-asset').forEach(button => {
+            button.addEventListener('click', function() {
+                const assetId = this.getAttribute('data-id');
+                editAsset(assetId);
+            });
+        });
+        
+        document.querySelectorAll('.delete-asset').forEach(button => {
+            button.addEventListener('click', function() {
+                const assetId = this.getAttribute('data-id');
+                deleteAsset(assetId);
+            });
+        });
+    }
+    
+    // Renderizar soluciones en la tabla
+    function renderSolutions() {
+        const table = document.getElementById('solutionsTable');
+        table.innerHTML = '';
+        
+        solutions.forEach(solution => {
+            // Formatear fecha
+            const date = solution.date ? new Date(solution.date).toLocaleDateString() : 'N/A';
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${solution.problem}</td>
+                <td>${solution.company}</td>
+                <td>${solution.category}</td>
+                <td>${date}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-info me-1 view-solution" data-id="${solution.id}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning me-1 edit-solution" data-id="${solution.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-solution" data-id="${solution.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            table.appendChild(row);
+        });
+        
+        // Agregar event listeners para los botones
+        document.querySelectorAll('.view-solution').forEach(button => {
+            button.addEventListener('click', function() {
+                const solutionId = this.getAttribute('data-id');
+                viewSolution(solutionId);
+            });
+        });
+        
+        document.querySelectorAll('.edit-solution').forEach(button => {
+            button.addEventListener('click', function() {
+                const solutionId = this.getAttribute('data-id');
+                editSolution(solutionId);
+            });
+        });
+        
+        document.querySelectorAll('.delete-solution').forEach(button => {
+            button.addEventListener('click', function() {
+                const solutionId = this.getAttribute('data-id');
+                deleteSolution(solutionId);
+            });
+        });
+    }
+    
+    // Renderizar mantenimientos en la tabla
+    function renderMaintenance() {
+        const table = document.getElementById('maintenanceTable');
+        table.innerHTML = '';
+        
+        maintenance.forEach(maint => {
+            // Obtener el nombre del activo
+            let assetName = 'Activo no encontrado';
+            if (maint.asset) {
+                const asset = assets.find(a => a.id === maint.asset);
+                if (asset) assetName = asset.name;
+            }
+            
+            // Formatear fecha
+            const date = maint.date ? new Date(maint.date).toLocaleDateString() : 'N/A';
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${assetName}</td>
+                <td>${maint.company}</td>
+                <td>${maint.type}</td>
+                <td>${date}</td>
+                <td>${maint.description.substring(0, 50)}${maint.description.length > 50 ? '...' : ''}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-warning me-1 edit-maintenance" data-id="${maint.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-maintenance" data-id="${maint.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            table.appendChild(row);
+        });
+        
+        // Agregar event listeners para los botones de editar y eliminar
+        document.querySelectorAll('.edit-maintenance').forEach(button => {
+            button.addEventListener('click', function() {
+                const maintenanceId = this.getAttribute('data-id');
+                editMaintenance(maintenanceId);
+            });
+        });
+        
+        document.querySelectorAll('.delete-maintenance').forEach(button => {
+            button.addEventListener('click', function() {
+                const maintenanceId = this.getAttribute('data-id');
+                deleteMaintenance(maintenanceId);
+            });
+        });
+    }
+    
+    // Renderizar contraseñas en la tabla
+    function renderPasswords() {
+        const table = document.getElementById('passwordsTable');
+        table.innerHTML = '';
+        
+        passwords.forEach(password => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${password.system}</td>
+                <td>${password.company}</td>
+                <td>${password.username}</td>
+                <td>
+                    <span class="password-text">••••••••</span>
+                    <button class="btn btn-sm btn-outline-secondary ms-2 show-password" data-id="${password.id}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-warning me-1 edit-password" data-id="${password.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-password" data-id="${password.id}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            table.appendChild(row);
+        });
+        
+        // Agregar event listeners para los botones
+        document.querySelectorAll('.show-password').forEach(button => {
+            button.addEventListener('click', function() {
+                const passwordId = this.getAttribute('data-id');
+                togglePasswordVisibility(passwordId, this);
+            });
+        });
+        
+        document.querySelectorAll('.edit-password').forEach(button => {
+            button.addEventListener('click', function() {
+                const passwordId = this.getAttribute('data-id');
+                editPassword(passwordId);
+            });
+        });
+        
+        document.querySelectorAll('.delete-password').forEach(button => {
+            button.addEventListener('click', function() {
+                const passwordId = this.getAttribute('data-id');
+                deletePassword(passwordId);
+            });
+        });
+    }
+    
+    // Actualizar el dashboard con estadísticas
+    function updateDashboard() {
+        // Actualizar contadores
+        document.getElementById('userCount').textContent = users.length;
+        document.getElementById('assetCount').textContent = assets.length;
+        document.getElementById('solutionCount').textContent = solutions.length;
+        document.getElementById('maintenanceCount').textContent = maintenance.length;
+        
+        // Actualizar gráfico de activos por empresa
+        updateCompanyChart();
+        
+        // Actualizar últimos mantenimientos
+        updateRecentMaintenance();
+    }
+    
+    // Actualizar gráfico de activos por empresa
+    function updateCompanyChart() {
+        // Contar activos por empresa
+        const companyCounts = {
+            'HB Y CIA S.A.S': 0,
+            'Vehidiesel': 0,
+            'Vehimotors': 0
+        };
+        
+        assets.forEach(asset => {
+            if (companyCounts.hasOwnProperty(asset.company)) {
+                companyCounts[asset.company]++;
+            }
+        });
+        
+        // Crear o actualizar el gráfico
+        const ctx = document.getElementById('companyChart').getContext('2d');
+        
+        // Si ya existe un gráfico, destruirlo primero
+        if (window.companyChartInstance) {
+            window.companyChartInstance.destroy();
+        }
+        
+        window.companyChartInstance = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(companyCounts),
+                datasets: [{
+                    data: Object.values(companyCounts),
+                    backgroundColor: [
+                        'rgba(58, 123, 213, 0.8)',
+                        'rgba(40, 167, 69, 0.8)',
+                        'rgba(255, 193, 7, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(58, 123, 213, 1)',
+                        'rgba(40, 167, 69, 1)',
+                        'rgba(255, 193, 7, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#e0e0e0'
+                        }
+                        }
+                }
+            }
+        });
+    }
+    
+    // Actualizar la tabla de últimos mantenimientos
+    function updateRecentMaintenance() {
+        const table = document.getElementById('recentMaintenance');
+        table.innerHTML = '';
+        
+        // Ordenar mantenimientos por fecha (más recientes primero)
+        const sortedMaintenance = [...maintenance].sort((a, b) => {
+            return new Date(b.date) - new Date(a.date);
+        });
+        
+        // Tomar los 5 más recientes
+        const recent = sortedMaintenance.slice(0, 5);
+        
+        recent.forEach(maint => {
+            // Obtener el nombre del activo
+            let assetName = 'Activo no encontrado';
+            if (maint.asset) {
+                const asset = assets.find(a => a.id === maint.asset);
+                if (asset) assetName = asset.name;
+            }
+            
+            // Formatear fecha
+            const date = maint.date ? new Date(maint.date).toLocaleDateString() : 'N/A';
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${assetName}</td>
+                <td>${date}</td>
+                <td>${maint.type}</td>
+            `;
+            table.appendChild(row);
+        });
+    }
+    
+    // Guardar usuario
+    function saveUser() {
+        const userId = document.getElementById('userId').value;
+        const userData = {
+            name: document.getElementById('userName').value,
+            company: document.getElementById('userCompany').value,
+            position: document.getElementById('userPosition').value,
+            email: document.getElementById('userEmail').value,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        // Si es una edición, mantener la fecha de creación original
+        if (!userId) {
+            userData.createdAt = firebase.database.ServerValue.TIMESTAMP;
+        }
+        
+        showLoading();
+        
+        if (userId) {
+            // Actualizar usuario existente
+            usersRef.child(userId).update(userData)
+                .then(() => {
+                    showToast('Usuario actualizado correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al actualizar usuario: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        } else {
+            // Crear nuevo usuario
+            usersRef.push(userData)
+                .then(() => {
+                    showToast('Usuario creado correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al crear usuario: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+        
+        // Cerrar modal y resetear formulario
+        bootstrap.Modal.getInstance(document.getElementById('userModal')).hide();
+        document.getElementById('userForm').reset();
+        document.getElementById('userId').value = '';
+    }
+    
+    // Guardar activo
+    function saveAsset() {
+        const assetId = document.getElementById('assetId').value;
+        const userValue = document.getElementById('assetUser').value;
+        
+        const assetData = {
+            name: document.getElementById('assetName').value,
+            company: document.getElementById('assetCompany').value,
+            type: document.getElementById('assetType').value,
+            user: userValue || null,
+            status: document.getElementById('assetStatus').value,
+            specifications: document.getElementById('assetSpecs').value,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        // Si es una edición, mantener la fecha de creación original
+        if (!assetId) {
+            assetData.createdAt = firebase.database.ServerValue.TIMESTAMP;
+        }
+        
+        showLoading();
+        
+        if (assetId) {
+            // Actualizar activo existente
+            assetsRef.child(assetId).update(assetData)
+                .then(() => {
+                    showToast('Activo actualizado correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al actualizar activo: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        } else {
+            // Crear nuevo activo
+            assetsRef.push(assetData)
+                .then(() => {
+                    showToast('Activo creado correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al crear activo: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+        
+        // Cerrar modal y resetear formulario
+        bootstrap.Modal.getInstance(document.getElementById('assetModal')).hide();
+        document.getElementById('assetForm').reset();
+        document.getElementById('assetId').value = '';
+    }
+    
+    // Guardar solución
+    function saveSolution() {
+        const solutionId = document.getElementById('solutionId').value;
+        
+        const solutionData = {
+            problem: document.getElementById('solutionProblem').value,
+            company: document.getElementById('solutionCompany').value,
+            category: document.getElementById('solutionCategory').value,
+            description: document.getElementById('solutionDescription').value,
+            date: firebase.database.ServerValue.TIMESTAMP,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        // Si es una edición, mantener la fecha de creación original
+        if (!solutionId) {
+            solutionData.createdAt = firebase.database.ServerValue.TIMESTAMP;
+        }
+        
+        showLoading();
+        
+        if (solutionId) {
+            // Actualizar solución existente
+            solutionsRef.child(solutionId).update(solutionData)
+                .then(() => {
+                    showToast('Solución actualizada correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al actualizar solución: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        } else {
+            // Crear nueva solución
+            solutionsRef.push(solutionData)
+                .then(() => {
+                    showToast('Solución creada correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al crear solución: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+        
+        // Cerrar modal y resetear formulario
+        bootstrap.Modal.getInstance(document.getElementById('solutionModal')).hide();
+        document.getElementById('solutionForm').reset();
+        document.getElementById('solutionId').value = '';
+    }
+    
+    // Guardar mantenimiento
+    function saveMaintenance() {
+        const maintenanceId = document.getElementById('maintenanceId').value;
+        
+        const maintenanceData = {
+            asset: document.getElementById('maintenanceAsset').value,
+            company: document.getElementById('maintenanceCompany').value,
+            type: document.getElementById('maintenanceType').value,
+            date: document.getElementById('maintenanceDate').value,
+            description: document.getElementById('maintenanceDescription').value,
+            cost: document.getElementById('maintenanceCost').value || 0,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        // Si es una edición, mantener la fecha de creación original
+        if (!maintenanceId) {
+            maintenanceData.createdAt = firebase.database.ServerValue.TIMESTAMP;
+        }
+        
+        showLoading();
+        
+        if (maintenanceId) {
+            // Actualizar mantenimiento existente
+            maintenanceRef.child(maintenanceId).update(maintenanceData)
+                .then(() => {
+                    showToast('Mantenimiento actualizado correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al actualizar mantenimiento: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        } else {
+            // Crear nuevo mantenimiento
+            maintenanceRef.push(maintenanceData)
+                .then(() => {
+                    showToast('Mantenimiento creado correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al crear mantenimiento: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+        
+        // Cerrar modal y resetear formulario
+        bootstrap.Modal.getInstance(document.getElementById('maintenanceModal')).hide();
+        document.getElementById('maintenanceForm').reset();
+        document.getElementById('maintenanceId').value = '';
+    }
+    
+    // Guardar contraseña
+    function savePassword() {
+        const passwordId = document.getElementById('passwordId').value;
+        
+        const passwordData = {
+            system: document.getElementById('passwordSystem').value,
+            company: document.getElementById('passwordCompany').value,
+            username: document.getElementById('passwordUsername').value,
+            password: document.getElementById('passwordValue').value,
+            url: document.getElementById('passwordUrl').value || '',
+            notes: document.getElementById('passwordNotes').value || '',
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        // Si es una edición, mantener la fecha de creación original
+        if (!passwordId) {
+            passwordData.createdAt = firebase.database.ServerValue.TIMESTAMP;
+        }
+        
+        showLoading();
+        
+        if (passwordId) {
+            // Actualizar contraseña existente
+            passwordsRef.child(passwordId).update(passwordData)
+                .then(() => {
+                    showToast('Contraseña actualizada correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al actualizar contraseña: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        } else {
+            // Crear nueva contraseña
+            passwordsRef.push(passwordData)
+                .then(() => {
+                    showToast('Contraseña guardada correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al guardar contraseña: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+        
+        // Cerrar modal y resetear formulario
+        bootstrap.Modal.getInstance(document.getElementById('passwordModal')).hide();
+        document.getElementById('passwordForm').reset();
+        document.getElementById('passwordId').value = '';
+        document.getElementById('passwordValue').setAttribute('type', 'password');
+        document.getElementById('togglePassword').innerHTML = '<i class="fas fa-eye"></i>';
+    }
+    
+    // Editar usuario
+    function editUser(userId) {
+        const user = users.find(u => u.id === userId);
+        if (user) {
+            document.getElementById('userId').value = user.id;
+            document.getElementById('userName').value = user.name;
+            document.getElementById('userCompany').value = user.company;
+            document.getElementById('userPosition').value = user.position;
+            document.getElementById('userEmail').value = user.email;
+            
+            document.getElementById('userModalTitle').textContent = 'Editar Usuario';
+            
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        }
+    }
+    
+    // Editar activo
+    function editAsset(assetId) {
+        const asset = assets.find(a => a.id === assetId);
+        if (asset) {
+            document.getElementById('assetId').value = asset.id;
+            document.getElementById('assetName').value = asset.name;
+            document.getElementById('assetCompany').value = asset.company;
+            document.getElementById('assetType').value = asset.type;
+            document.getElementById('assetUser').value = asset.user || '';
+            document.getElementById('assetStatus').value = asset.status;
+            document.getElementById('assetSpecs').value = asset.specifications || '';
+            
+            document.getElementById('assetModalTitle').textContent = 'Editar Activo';
+            
+            const modal = new bootstrap.Modal(document.getElementById('assetModal'));
+            modal.show();
+        }
+    }
+    
+    // Editar solución
+    function editSolution(solutionId) {
+        const solution = solutions.find(s => s.id === solutionId);
+        if (solution) {
+            document.getElementById('solutionId').value = solution.id;
+            document.getElementById('solutionProblem').value = solution.problem;
+            document.getElementById('solutionCompany').value = solution.company;
+            document.getElementById('solutionCategory').value = solution.category;
+            document.getElementById('solutionDescription').value = solution.description;
+            
+            document.getElementById('solutionModalTitle').textContent = 'Editar Solución';
+            
+            const modal = new bootstrap.Modal(document.getElementById('solutionModal'));
+            modal.show();
+        }
+    }
+    
+    // Ver solución
+    function viewSolution(solutionId) {
+        const solution = solutions.find(s => s.id === solutionId);
+        if (solution) {
+            alert(`Solución para: ${solution.problem}\n\n${solution.description}`);
+        }
+    }
+    
+    // Editar mantenimiento
+    function editMaintenance(maintenanceId) {
+        const maint = maintenance.find(m => m.id === maintenanceId);
+        if (maint) {
+            document.getElementById('maintenanceId').value = maint.id;
+            document.getElementById('maintenanceAsset').value = maint.asset;
+            document.getElementById('maintenanceCompany').value = maint.company;
+            document.getElementById('maintenanceType').value = maint.type;
+            document.getElementById('maintenanceDate').value = formatDateForInput(maint.date);
+            document.getElementById('maintenanceDescription').value = maint.description;
+            document.getElementById('maintenanceCost').value = maint.cost || '';
+            
+            document.getElementById('maintenanceModalTitle').textContent = 'Editar Mantenimiento';
+            
+            const modal = new bootstrap.Modal(document.getElementById('maintenanceModal'));
+            modal.show();
+        }
+    }
+    
+    // Editar contraseña
+    function editPassword(passwordId) {
+        const password = passwords.find(p => p.id === passwordId);
+        if (password) {
+            document.getElementById('passwordId').value = password.id;
+            document.getElementById('passwordSystem').value = password.system;
+            document.getElementById('passwordCompany').value = password.company;
+            document.getElementById('passwordUsername').value = password.username;
+            document.getElementById('passwordValue').value = password.password;
+            document.getElementById('passwordUrl').value = password.url || '';
+            document.getElementById('passwordNotes').value = password.notes || '';
+            
+            document.getElementById('passwordModalTitle').textContent = 'Editar Contraseña';
+            
+            const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
+            modal.show();
+        }
+    }
+    
+    // Eliminar usuario
+    function deleteUser(userId) {
+        if (confirm('¿Estás seguro de que quieres eliminar este usuario?')) {
+            showLoading();
+            usersRef.child(userId).remove()
+                .then(() => {
+                    showToast('Usuario eliminado correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al eliminar usuario: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+    }
+    
+    // Eliminar activo
+    function deleteAsset(assetId) {
+        if (confirm('¿Estás seguro de que quieres eliminar este activo?')) {
+            showLoading();
+            assetsRef.child(assetId).remove()
+                .then(() => {
+                    showToast('Activo eliminado correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al eliminar activo: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+    }
+    
+    // Eliminar solución
+    function deleteSolution(solutionId) {
+        if (confirm('¿Estás seguro de que quieres eliminar esta solución?')) {
+            showLoading();
+            solutionsRef.child(solutionId).remove()
+                .then(() => {
+                    showToast('Solución eliminada correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al eliminar solución: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+    }
+    
+    // Eliminar mantenimiento
+    function deleteMaintenance(maintenanceId) {
+        if (confirm('¿Estás seguro de que quieres eliminar este mantenimiento?')) {
+            showLoading();
+            maintenanceRef.child(maintenanceId).remove()
+                .then(() => {
+                    showToast('Mantenimiento eliminado correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al eliminar mantenimiento: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+    }
+    
+    // Eliminar contraseña
+    function deletePassword(passwordId) {
+        if (confirm('¿Estás seguro de que quieres eliminar esta contraseña?')) {
+            showLoading();
+            passwordsRef.child(passwordId).remove()
+                .then(() => {
+                    showToast('Contraseña eliminada correctamente', 'success');
+                })
+                .catch(error => {
+                    showToast('Error al eliminar contraseña: ' + error.message, 'danger');
+                })
+                .finally(() => {
+                    hideLoading();
+                });
+        }
+    }
+    
+    // Alternar visibilidad de contraseña
+    function togglePasswordVisibility(passwordId, button) {
+        const password = passwords.find(p => p.id === passwordId);
+        if (password) {
+            const row = button.closest('tr');
+            const passwordText = row.querySelector('.password-text');
+            
+            if (passwordText.textContent === '••••••••') {
+                passwordText.textContent = password.password;
+                button.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                passwordText.textContent = '••••••••';
+                button.innerHTML = '<i class="fas fa-eye"></i>';
+            }
+        }
+    }
+    
+    // Exportar datos a Excel
+    function exportToExcel() {
+        // Crear un libro de trabajo
+        const wb = XLSX.utils.book_new();
+        
+        // Crear hojas para cada tipo de dato
+        const userSheet = XLSX.utils.json_to_sheet(users.map(u => ({
+            Nombre: u.name,
+            Empresa: u.company,
+            Cargo: u.position,
+            Email: u.email
+        })));
+        
+        const assetSheet = XLSX.utils.json_to_sheet(assets.map(a => ({
+            Nombre: a.name,
+            Empresa: a.company,
+            Tipo: a.type,
+            Usuario: a.user ? (users.find(u => u.id === a.user)?.name || '') : '',
+            Estado: a.status,
+            Especificaciones: a.specifications || ''
+        })));
+        
+        const solutionSheet = XLSX.utils.json_to_sheet(solutions.map(s => ({
+            Problema: s.problem,
+            Empresa: s.company,
+            Categoría: s.category,
+            Solución: s.description,
+            Fecha: s.date ? new Date(s.date).toLocaleDateString() : ''
+        })));
+        
+        const maintenanceSheet = XLSX.utils.json_to_sheet(maintenance.map(m => {
+            const asset = m.asset ? assets.find(a => a.id === m.asset) : null;
+            return {
+                Activo: asset ? asset.name : '',
+                Empresa: m.company,
+                Tipo: m.type,
+                Fecha: m.date ? new Date(m.date).toLocaleDateString() : '',
+                Descripción: m.description,
+                Costo: m.cost || 0
+            };
+        }));
+        
+        const passwordSheet = XLSX.utils.json_to_sheet(passwords.map(p => ({
+            Sistema: p.system,
+            Empresa: p.company,
+            Usuario: p.username,
+            Contraseña: p.password,
+            URL: p.url || '',
+            Notas: p.notes || ''
+        })));
+        
+        // Añadir hojas al libro
+        XLSX.utils.book_append_sheet(wb, userSheet, 'Usuarios');
+        XLSX.utils.book_append_sheet(wb, assetSheet, 'Activos');
+        XLSX.utils.book_append_sheet(wb, solutionSheet, 'Soluciones');
+        XLSX.utils.book_append_sheet(wb, maintenanceSheet, 'Mantenimientos');
+        XLSX.utils.book_append_sheet(wb, passwordSheet, 'Contraseñas');
+        
+        // Guardar el archivo
+        XLSX.writeFile(wb, 'gestion_activos_usuarios.xlsx');
+        showToast('Datos exportados correctamente', 'success');
+    }
+    
+    // Funciones auxiliares
+    function getStatusBadgeClass(status) {
+        switch (status) {
+            case 'Activo': return 'bg-success';
+            case 'Inactivo': return 'bg-secondary';
+            case 'Mantenimiento': return 'bg-warning';
+            case 'Baja': return 'bg-danger';
+            default: return 'bg-secondary';
+        }
+    }
+    
+    function formatDateForInput(timestamp) {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        return date.toISOString().split('T')[0];
+    }
+</script>
+</body>
+</html>
