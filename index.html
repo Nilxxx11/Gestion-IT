@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestor de Activos Empresarial</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <!-- ✅ SheetJS para exportar a Excel -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --light-bg: #f9fafb;
+      --card-bg: #ffffff;
+      --border-color: #e5e7eb;
+      --text-color: #1f2937;
+      --text-light: #6b7280;
+      --success: #10b981;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--light-bg);
+      color: var(--text-color);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px 0;
+    }
+
+    .logo-container {
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      height: 60px;
+      max-width: 200px;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin: 12px 0 8px;
+    }
+
+    header p {
+      color: var(--text-light);
+      font-size: 1rem;
+    }
+
+    .tabs {
+      display: flex;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px 16px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      color: var(--text-light);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--primary);
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+    }
+
+    .tab-content {
+      display: none;
+      background: var(--card-bg);
+      border-radius: 14px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+      padding: 28px;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin-bottom: 20px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    h3 {
+      font-size: 1.25rem;
+      margin: 24px 0 16px;
+      color: var(--text-color);
+    }
+
+    .form-card {
+      background: #f8fafc;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+      border: 1px solid var(--border-color);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: var(--text-color);
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    button[type="submit"] {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: auto;
+    }
+
+    button[type="submit"]:hover {
+      background: var(--primary-dark);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+
+    th {
+      background-color: #f1f5f9;
+      color: var(--primary);
+      font-weight: 600;
+      padding: 14px 16px;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+
+    td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-color);
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    td:hover {
+      background-color: #f0f7ff;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:nth-child(even) {
+      background-color: #fafcff;
+    }
+
+    tr:nth-child(even) td:hover {
+      background-color: #f0f7ff;
+    }
+
+    .editable-input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--primary);
+      border-radius: 4px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      border: 1px solid #bfdbfe;
+    }
+
+    .stat-card h3 {
+      font-size: 1rem;
+      color: var(--text-light);
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .stat-card .value {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-card .icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      color: var(--primary);
+    }
+
+    .btn-secondary {
+      background: white;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: #f0f9ff;
+    }
+
+    .import-export {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .tabs {
+        flex-direction: column;
+      }
+      .tab-btn {
+        min-width: auto;
+        margin-bottom: 6px;
+      }
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      .import-export {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .logo {
+        height: 50px;
+      }
+      header h1 {
+        font-size: 1.7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo-container">
+        <img id="app-logo" class="logo" alt="Logo de la empresa">
+      </div>
+      <h1>Gestor de Activos Empresarial</h1>
+      <p>Control total de tus equipos, usuarios y mantenimientos</p>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">📊 Dashboard</button>
+      <button class="tab-btn" data-tab="usuarios">👥 Usuarios</button>
+      <button class="tab-btn" data-tab="activos">💻 Activos</button>
+      <button class="tab-btn" data-tab="mantenimientos">🔧 Mantenimientos</button>
+      <button class="tab-btn" data-tab="importar">📤 Importar/Exportar</button>
+    </div>
+
+    <div id="dashboard" class="tab-content active">
+      <div class="dashboard-grid">
+        <div class="stat-card">
+          <div class="icon">👥</div>
+          <h3>Usuarios Registrados</h3>
+          <div class="value" id="count-usuarios">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">💻</div>
+          <h3>Activos en Sistema</h3>
+          <div class="value" id="count-activos">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🔧</div>
+          <h3>Mantenimientos Realizados</h3>
+          <div class="value" id="count-mantenimientos">0</div>
+        </div>
+      </div>
+
+      <h3>Últimos 5 Mantenimientos</h3>
+      <table id="tabla-ultimos-mantenimientos">
+        <thead><tr><th>Equipo</th><th>Fecha</th><th>Tipo</th><th>Observaciones</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="usuarios" class="tab-content">
+      <div class="form-card">
+        <h2>Registrar Nuevo Usuario</h2>
+        <form id="form-usuario">
+          <div class="form-group"><label>Nombre Completo</label><input type="text" id="nombre-usuario" required /></div>
+          <div class="form-group"><label>Correo Electrónico</label><input type="email" id="email-usuario" required /></div>
+          <button type="submit">Agregar Usuario</button>
+        </form>
+      </div>
+      <h3>Lista de Usuarios</h3>
+      <table id="tabla-usuarios"><thead><tr><th>Nombre</th><th>Correo</th><th>Fecha Registro</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="activos" class="tab-content">
+      <div class="form-card">
+        <h2>Registrar Nuevo Activo</h2>
+        <form id="form-activo">
+          <div class="form-group"><label>Nombre del Activo</label><input type="text" id="nombre-activo" required /></div>
+          <div class="form-group"><label>Serial</label><input type="text" id="serial-activo" required /></div>
+          <div class="form-group"><label>Empresa</label><input type="text" id="empresa-activo" required /></div>
+          <div class="form-group"><label>Tipo</label><input type="text" id="tipo-activo" placeholder="Ej: Laptop, Impresora" required /></div>
+          <div class="form-group"><label>Estado</label><select id="estado-activo" required><option value="">Seleccionar estado</option><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="en_reparacion">En reparación</option></select></div>
+          <div class="form-group"><label>Usuario Asignado</label><input type="text" id="usuario-asignado" placeholder="Nombre o email del usuario" /></div>
+          <div class="form-group"><label>Especificaciones Técnicas</label><textarea id="especificaciones-activo" placeholder="Detalles técnicos, modelo, etc."></textarea></div>
+          <button type="submit">Registrar Activo</button>
+        </form>
+      </div>
+      <h3>Inventario de Activos</h3>
+      <table id="tabla-activos"><thead><tr><th>Nombre</th><th>Serial</th><th>Empresa</th><th>Tipo</th><th>Estado</th><th>Asignado a</th><th>Especificaciones</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="mantenimientos" class="tab-content">
+      <div class="form-card">
+        <h2>Registrar Mantenimiento</h2>
+        <form id="form-mantenimiento">
+          <div class="form-group"><label>Equipo (Nombre o Serial)</label><input type="text" id="equipo-mantenimiento" required /></div>
+          <div class="form-group"><label>Fecha</label><input type="date" id="fecha-mantenimiento" required /></div>
+          <div class="form-group"><label>Tipo de Mantenimiento</label><input type="text" id="tipo-mantenimiento" placeholder="Preventivo, Correctivo, etc." required /></div>
+          <div class="form-group"><label>Observaciones</label><textarea id="observaciones-mantenimiento" placeholder="Detalles del mantenimiento realizado"></textarea></div>
+          <button type="submit">Registrar Mantenimiento</button>
+        </form>
+      </div>
+      <h3>Historial de Mantenimientos</h3>
+      <table id="tabla-mantenimientos"><thead><tr><th>Equipo</th><th>Fecha</th><th>Tipo</th><th>Observaciones</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="importar" class="tab-content">
+      <h2>Importar y Exportar Datos</h2>
+      <p style="margin-bottom: 20px; color: var(--text-light);">Exporta a Excel con hojas separadas para cada categoría.</p>
+      <div class="import-export">
+        <button class="btn-secondary" onclick="exportarDatos()">📥 Exportar a Excel (.xlsx)</button>
+        <input type="file" id="import-file" accept=".json" style="padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);" />
+        <button class="btn-secondary" onclick="importarDatos()">📤 Importar desde JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 🔧 CONFIGURACIÓN DEL LOGO
+    const LOGO_URL = "logo.png"; // 👈 ¡CAMBIA ESTO!
+
+    // 🔥 Configuración de Firebase (¡NO OLVIDES CAMBIARLA!)
+    const firebaseConfig = {
+        apiKey: "AIzaSyCfJiBkzwaLdoSpQDHU3rCgfC4nMr58hUk",
+        authDomain: "paginaweb-d1886.firebaseapp.com",
+        databaseURL: "https://paginaweb-d1886-default-rtdb.firebaseio.com",
+        projectId: "paginaweb-d1886",
+        storageBucket: "paginaweb-d1886.firebasestorage.app",
+        messagingSenderId: "430619803153",
+        appId: "1:430619803153:web:1fbada3c7fb6ca45a07bb0",
+        measurementId: "G-BYJ5RVSZ92"
+    };
+
+
+    document.getElementById('app-logo').src = LOGO_URL;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- Navegación por pestañas ---
+    document.querySelectorAll('.tab-btn').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        button.classList.add('active');
+        const tabId = button.getAttribute('data-tab');
+        document.getElementById(tabId).classList.add('active');
+      });
+    });
+
+    // --- Formularios ---
+    document.getElementById('form-usuario').addEventListener('submit', e => {
+      e.preventDefault();
+      db.ref('usuarios').push({
+        nombre: e.target['nombre-usuario'].value,
+        email: e.target['email-usuario'].value,
+        fecha_registro: new Date().toISOString()
+      });
+      e.target.reset();
+      cargarAll();
+    });
+
+    document.getElementById('form-activo').addEventListener('submit', e => {
+      e.preventDefault();
+      db.ref('activos').push({
+        nombre: e.target['nombre-activo'].value,
+        serial: e.target['serial-activo'].value,
+        empresa: e.target['empresa-activo'].value,
+        tipo: e.target['tipo-activo'].value,
+        estado: e.target['estado-activo'].value,
+        usuario_asignado: e.target['usuario-asignado'].value,
+        especificaciones: e.target['especificaciones-activo'].value,
+        fecha_registro: new Date().toISOString()
+      });
+      e.target.reset();
+      cargarAll();
+    });
+
+    document.getElementById('form-mantenimiento').addEventListener('submit', e => {
+      e.preventDefault();
+      db.ref('mantenimientos').push({
+        equipo: e.target['equipo-mantenimiento'].value,
+        fecha: e.target['fecha-mantenimiento'].value,
+        tipo: e.target['tipo-mantenimiento'].value,
+        observaciones: e.target['observaciones-mantenimiento'].value,
+        fecha_registro: new Date().toISOString()
+      });
+      e.target.reset();
+      cargarAll();
+    });
+
+    // --- Edición en tablas ---
+    function makeEditable(tableId, fields, path) {
+      const table = document.getElementById(tableId);
+      table.addEventListener('click', (e) => {
+        if (e.target.tagName === 'TD') {
+          const row = e.target.closest('tr');
+          const key = row.dataset.key;
+          if (!key) return;
+
+          const colIndex = Array.from(e.target.parentNode.children).indexOf(e.target);
+          const field = fields[colIndex];
+          if (!field) return;
+
+          const currentValue = e.target.textContent.trim();
+          if (currentValue === '—') return;
+
+          const input = document.createElement('input');
+          input.type = field === 'fecha' ? 'date' : 'text';
+          input.className = 'editable-input';
+          input.value = field === 'fecha' ? currentValue : currentValue;
+          e.target.innerHTML = '';
+          e.target.appendChild(input);
+          input.focus();
+
+          const saveChanges = () => {
+            const newValue = input.value.trim();
+            if (newValue !== currentValue) {
+              db.ref(`${path}/${key}`).update({ [field]: newValue }).then(() => {
+                cargarAll();
+              }).catch(err => {
+                console.error("Error al guardar:", err);
+                alert("Error al guardar el cambio.");
+                cargarAll();
+              });
+            } else {
+              cargarAll();
+            }
+          };
+
+          input.addEventListener('blur', saveChanges);
+          input.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') {
+              saveChanges();
+            } else if (ev.key === 'Escape') {
+              cargarAll();
+            }
+          });
+        }
+      });
+    }
+
+    // --- Carga de tablas ---
+    function cargarUsuarios() {
+      const tbody = document.querySelector('#tabla-usuarios tbody');
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Cargando...</td></tr>';
+      db.ref('usuarios').once('value').then(snapshot => {
+        tbody.innerHTML = '';
+        snapshot.forEach(child => {
+          const u = child.val();
+          const tr = document.createElement('tr');
+          tr.dataset.key = child.key;
+          tr.innerHTML = `<td>${u.nombre}</td><td>${u.email}</td><td>${new Date(u.fecha_registro).toLocaleDateString()}</td>`;
+          tbody.appendChild(tr);
+        });
+        makeEditable('tabla-usuarios', ['nombre', 'email', null], 'usuarios');
+      });
+    }
+
+    function cargarActivos() {
+      const tbody = document.querySelector('#tabla-activos tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Cargando...</td></tr>';
+      db.ref('activos').once('value').then(snapshot => {
+        tbody.innerHTML = '';
+        snapshot.forEach(child => {
+          const a = child.val();
+          const tr = document.createElement('tr');
+          tr.dataset.key = child.key;
+          tr.innerHTML = `
+            <td>${a.nombre}</td>
+            <td>${a.serial}</td>
+            <td>${a.empresa}</td>
+            <td>${a.tipo}</td>
+            <td>${a.estado}</td>
+            <td>${a.usuario_asignado || '—'}</td>
+            <td>${a.especificaciones?.substring(0, 50) || '—'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        makeEditable('tabla-activos', ['nombre', 'serial', 'empresa', 'tipo', 'estado', 'usuario_asignado', 'especificaciones'], 'activos');
+      });
+    }
+
+    function cargarMantenimientos() {
+      const tbody = document.querySelector('#tabla-mantenimientos tbody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 16px;">Cargando historial...</td></tr>';
+
+      db.ref('mantenimientos').once('value').then(snapshot => {
+        if (!snapshot.exists() || snapshot.numChildren() === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 16px;">No hay registros de mantenimiento.</td></tr>';
+          return;
+        }
+
+        const mantenimientos = [];
+        snapshot.forEach(child => {
+          mantenimientos.push({ key: child.key, ...child.val() });
+        });
+
+        mantenimientos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+        tbody.innerHTML = '';
+        mantenimientos.forEach(m => {
+          const tr = document.createElement('tr');
+          tr.dataset.key = m.key;
+          tr.innerHTML = `
+            <td>${m.equipo || '—'}</td>
+            <td>${m.fecha || '—'}</td>
+            <td>${m.tipo || '—'}</td>
+            <td>${m.observaciones?.substring(0, 80) || '—'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+        makeEditable('tabla-mantenimientos', ['equipo', 'fecha', 'tipo', 'observaciones'], 'mantenimientos');
+      }).catch(err => {
+        console.error("Error al cargar mantenimientos:", err);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 16px; color: #e53e3e;">Error al cargar los datos.</td></tr>';
+      });
+    }
+
+    function cargarDashboard() {
+      db.ref('usuarios').once('value').then(s => {
+        document.getElementById('count-usuarios').textContent = s.numChildren();
+      });
+
+      db.ref('activos').once('value').then(s => {
+        document.getElementById('count-activos').textContent = s.numChildren();
+      });
+
+      db.ref('mantenimientos').once('value').then(snapshot => {
+        const count = snapshot.numChildren();
+        document.getElementById('count-mantenimientos').textContent = count;
+
+        if (count === 0) {
+          document.querySelector('#tabla-ultimos-mantenimientos tbody').innerHTML = 
+            '<tr><td colspan="4" style="text-align:center;">Sin mantenimientos</td></tr>';
+          return;
+        }
+
+        const mantenimientos = [];
+        snapshot.forEach(child => {
+          mantenimientos.push(child.val());
+        });
+
+        mantenimientos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        const ultimos5 = mantenimientos.slice(0, 5);
+
+        const tbody = document.querySelector('#tabla-ultimos-mantenimientos tbody');
+        tbody.innerHTML = '';
+        ultimos5.forEach(m => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${m.equipo || '—'}</td>
+            <td>${m.fecha || '—'}</td>
+            <td>${m.tipo || '—'}</td>
+            <td>${m.observaciones?.substring(0, 60) || '—'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }).catch(err => {
+        console.error("Error en dashboard:", err);
+        document.querySelector('#tabla-ultimos-mantenimientos tbody').innerHTML = 
+          '<tr><td colspan="4" style="text-align:center; color:red;">Error al cargar</td></tr>';
+      });
+    }
+
+    function cargarAll() {
+      cargarDashboard();
+      cargarUsuarios();
+      cargarActivos();
+      cargarMantenimientos();
+    }
+
+    // --- ✅ EXPORTAR A EXCEL CON HOJAS ---
+    function exportarDatos() {
+      const wb = XLSX.utils.book_new();
+
+      db.ref('usuarios').once('value').then(snapshot => {
+        const usuarios = [];
+        snapshot.forEach(child => {
+          const u = child.val();
+          usuarios.push({
+            "Nombre": u.nombre,
+            "Correo": u.email,
+            "Fecha Registro": new Date(u.fecha_registro).toLocaleDateString('es-ES')
+          });
+        });
+        const wsUsuarios = XLSX.utils.json_to_sheet(usuarios.length ? usuarios : [{"Nombre": "", "Correo": "", "Fecha Registro": ""}]);
+        XLSX.utils.book_append_sheet(wb, wsUsuarios, "Usuarios");
+        return db.ref('activos').once('value');
+      }).then(snapshot => {
+        const activos = [];
+        snapshot.forEach(child => {
+          const a = child.val();
+          activos.push({
+            "Nombre": a.nombre,
+            "Serial": a.serial,
+            "Empresa": a.empresa,
+            "Tipo": a.tipo,
+            "Estado": a.estado,
+            "Usuario Asignado": a.usuario_asignado || "",
+            "Especificaciones": a.especificaciones || ""
+          });
+        });
+        const wsActivos = XLSX.utils.json_to_sheet(activos.length ? activos : [{"Nombre": "", "Serial": "", "Empresa": "", "Tipo": "", "Estado": "", "Usuario Asignado": "", "Especificaciones": ""}]);
+        XLSX.utils.book_append_sheet(wb, wsActivos, "Activos");
+        return db.ref('mantenimientos').once('value');
+      }).then(snapshot => {
+        const mantenimientos = [];
+        snapshot.forEach(child => {
+          const m = child.val();
+          mantenimientos.push({
+            "Equipo": m.equipo || "",
+            "Fecha": m.fecha || "",
+            "Tipo": m.tipo || "",
+            "Observaciones": m.observaciones || ""
+          });
+        });
+        const wsMantenimientos = XLSX.utils.json_to_sheet(mantenimientos.length ? mantenimientos : [{"Equipo": "", "Fecha": "", "Tipo": "", "Observaciones": ""}]);
+        XLSX.utils.book_append_sheet(wb, wsMantenimientos, "Mantenimientos");
+        XLSX.writeFile(wb, "gestor_activos_exportacion.xlsx");
+      }).catch(err => {
+        console.error("Error al exportar:", err);
+        alert("❌ Error al generar el archivo Excel.");
+      });
+    }
+
+    // --- Importar desde JSON ---
+    function importarDatos() {
+      const file = document.getElementById('import-file').files[0];
+      if (!file) return alert('Por favor, selecciona un archivo JSON.');
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.usuarios) Object.values(data.usuarios).forEach(u => db.ref('usuarios').push(u));
+          if (data.activos) Object.values(data.activos).forEach(a => db.ref('activos').push(a));
+          if (data.mantenimientos) Object.values(data.mantenimientos).forEach(m => db.ref('mantenimientos').push(m));
+          alert('✅ Datos importados correctamente.');
+          cargarAll();
+        } catch (err) {
+          alert('❌ Error al importar: ' + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    window.onload = () => {
+      cargarAll();
+    };
+  </script>
+</body>
+</html>
